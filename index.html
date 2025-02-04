@@ -3,31 +3,216 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reservas Gimnasio</title>
-    <link rel="stylesheet" href="css/styles.css">
+    <title>Reserva de Sesiones - Gimnasio</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 0;
+            background-color: #f4f4f9;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .calendar {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .session {
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: #f9f9f9;
+        }
+        .session h2 {
+            margin: 0 0 10px;
+            font-size: 18px;
+        }
+        .session p {
+            margin: 5px 0;
+        }
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            background: #007BFF;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button.cancel {
+            background: #dc3545;
+        }
+        button.cancel:hover {
+            background: #a71d2a;
+        }
+        .logged-in-info {
+            text-align: right;
+            margin-bottom: 20px;
+        }
+        .error {
+            color: red;
+            font-size: 14px;
+        }
+    </style>
 </head>
 <body>
+
+    <h1>Reserva de Sesiones - Gimnasio</h1>
     <div class="container">
-        <h1>Reservas Gimnasio</h1>
-        <div id="login-section">
+
+        <!-- Información del usuario -->
+        <div class="logged-in-info">
+            <span id="user-name">Usuario: Invitado</span>
+            <button onclick="logout()">Salir</button>
+        </div>
+
+        <!-- Calendario de sesiones -->
+        <div class="calendar" id="calendar"></div>
+
+        <!-- Mensajes de error -->
+        <p class="error" id="error-message" style="display: none;"></p>
+
+        <!-- Formulario de inicio de sesión -->
+        <div id="login-form" style="display: none;">
             <h2>Iniciar Sesión</h2>
-            <form id="login-form">
-                <input type="email" id="email" placeholder="Correo electrónico" required>
-                <input type="password" id="password" placeholder="Contraseña" required>
-                <button type="submit">Iniciar Sesión</button>
-            </form>
+            <input type="text" id="username" placeholder="Nombre de usuario" required>
+            <button onclick="login()">Iniciar Sesión</button>
         </div>
-        <div id="reservation-section" style="display: none;">
-            <h2>Reservar Sesión</h2>
-            <div id="calendar"></div>
-            <div id="session-info">
-                <p>Sesión: <span id="session-time"></span></p>
-                <p>Plazas restantes: <span id="remaining-slots"></span></p>
-                <button id="reserve-btn">Reservar</button>
-                <button id="cancel-btn" style="display: none;">Cancelar Reserva</button>
-            </div>
-        </div>
+
     </div>
-    <script src="js/app.js"></script>
+
+    <script>
+        // Datos simulados
+        const sessions = {
+            "mañana": { capacity: 20, reserved: [] },
+            "tarde": { capacity: 20, reserved: [] }
+        };
+
+        let currentUser = null;
+
+        // Función para mostrar el calendario
+        function showCalendar() {
+            const calendarDiv = document.getElementById('calendar');
+            calendarDiv.innerHTML = ''; // Limpiar el contenido anterior
+
+            for (const [sessionName, sessionData] of Object.entries(sessions)) {
+                const sessionDiv = document.createElement('div');
+                sessionDiv.className = 'session';
+
+                const remaining = sessionData.capacity - sessionData.reserved.length;
+
+                sessionDiv.innerHTML = `
+                    <h2>Sesión ${sessionName.charAt(0).toUpperCase() + sessionName.slice(1)}</h2>
+                    <p>Hora: ${sessionName === 'mañana' ? '9:30 AM' : '7:30 PM'}</p>
+                    <p>Plazas disponibles: ${remaining}</p>
+                `;
+
+                if (!currentUser) {
+                    sessionDiv.innerHTML += '<p>Inicia sesión para reservar.</p>';
+                } else {
+                    const isReserved = sessionData.reserved.includes(currentUser);
+
+                    if (isReserved) {
+                        const cancelBtn = document.createElement('button');
+                        cancelBtn.textContent = 'Cancelar Reserva';
+                        cancelBtn.className = 'cancel';
+                        cancelBtn.onclick = () => cancelReservation(sessionName);
+                        sessionDiv.appendChild(cancelBtn);
+                    } else if (remaining > 0) {
+                        const reserveBtn = document.createElement('button');
+                        reserveBtn.textContent = 'Reservar';
+                        reserveBtn.onclick = () => makeReservation(sessionName);
+                        sessionDiv.appendChild(reserveBtn);
+                    } else {
+                        sessionDiv.innerHTML += '<p>No hay plazas disponibles.</p>';
+                    }
+                }
+
+                calendarDiv.appendChild(sessionDiv);
+            }
+        }
+
+        // Función para iniciar sesión
+        function login() {
+            const username = document.getElementById('username').value.trim();
+            if (username) {
+                currentUser = username;
+                document.getElementById('user-name').textContent = `Usuario: ${currentUser}`;
+                document.getElementById('login-form').style.display = 'none';
+                showCalendar();
+            } else {
+                showError('Por favor, ingresa un nombre de usuario.');
+            }
+        }
+
+        // Función para cerrar sesión
+        function logout() {
+            currentUser = null;
+            document.getElementById('user-name').textContent = 'Usuario: Invitado';
+            document.getElementById('login-form').style.display = 'block';
+            showCalendar();
+        }
+
+        // Función para hacer una reserva
+        function makeReservation(sessionName) {
+            if (!currentUser) {
+                showError('Debes iniciar sesión para reservar.');
+                return;
+            }
+
+            const session = sessions[sessionName];
+            if (session.reserved.includes(currentUser)) {
+                showError('Ya has reservado esta sesión.');
+            } else if (session.reserved.length < session.capacity) {
+                session.reserved.push(currentUser);
+                showSuccessMessage(`¡Reserva realizada para la sesión ${sessionName}!`);
+                showCalendar();
+            } else {
+                showError('No hay plazas disponibles.');
+            }
+        }
+
+        // Función para cancelar una reserva
+        function cancelReservation(sessionName) {
+            const session = sessions[sessionName];
+            const index = session.reserved.indexOf(currentUser);
+            if (index !== -1) {
+                session.reserved.splice(index, 1);
+                showSuccessMessage(`¡Reserva cancelada para la sesión ${sessionName}!`);
+                showCalendar();
+            } else {
+                showError('No tienes una reserva activa para esta sesión.');
+            }
+        }
+
+        // Función para mostrar errores
+        function showError(message) {
+            const errorMessage = document.getElementById('error-message');
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+        }
+
+        // Función para mostrar mensajes de éxito
+        function showSuccessMessage(message) {
+            alert(message);
+        }
+
+        // Inicialización
+        showCalendar();
+    </script>
+
 </body>
 </html>
