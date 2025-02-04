@@ -7,25 +7,30 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 20px;
+            margin: 0;
             padding: 0;
             background-color: #f4f4f9;
-        }
-        h1 {
-            text-align: center;
-            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
         }
         .container {
             max-width: 800px;
-            margin: 0 auto;
+            width: 100%;
             background: #fff;
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
         .calendar {
             display: grid;
-            grid-template-columns: repeat(7, 1fr);
+            grid-template-columns: repeat(5, 1fr);
             gap: 10px;
         }
         .day {
@@ -34,42 +39,35 @@
             border-radius: 5px;
             background: #f9f9f9;
             text-align: center;
+            transition: transform 0.2s ease-in-out;
+        }
+        .day:hover {
+            transform: scale(1.05);
+            background: #e9ecef;
         }
         .day-header {
             font-weight: bold;
             margin-bottom: 10px;
+            color: #555;
         }
         .session {
             margin-top: 10px;
             cursor: pointer;
-        }
-        .session:hover {
-            background: #e9ecef;
-        }
-        button {
-            padding: 10px 15px;
-            border: none;
+            padding: 5px;
             border-radius: 5px;
             background: #007BFF;
             color: white;
-            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s ease;
         }
-        button:hover {
+        .session:hover {
             background: #0056b3;
         }
-        button.cancel {
+        .session.cancelled {
             background: #dc3545;
         }
-        button.cancel:hover {
+        .session.cancelled:hover {
             background: #a71d2a;
-        }
-        .logged-in-info {
-            text-align: right;
-            margin-bottom: 20px;
-        }
-        .error {
-            color: red;
-            font-size: 14px;
         }
         .login-form {
             display: flex;
@@ -82,36 +80,51 @@
             margin-bottom: 10px;
             width: 100%;
             max-width: 300px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
         }
         .login-form button {
-            width: 100%;
-            max-width: 300px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background: #007BFF;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s ease;
+        }
+        .login-form button:hover {
+            background: #0056b3;
+        }
+        .error {
+            color: red;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        .success {
+            color: green;
+            font-size: 14px;
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
 
-    <h1>Reserva de Sesiones - Gimnasio</h1>
     <div class="container">
 
-        <!-- Información del usuario -->
-        <div class="logged-in-info">
-            <span id="user-name">Usuario: Invitado</span>
-            <button onclick="logout()">Salir</button>
-        </div>
-
         <!-- Formulario de inicio de sesión -->
-        <div class="login-form" id="login-form" style="display: none;">
+        <div class="login-form" id="login-form">
             <h2>Iniciar Sesión</h2>
             <input type="text" id="username" placeholder="Nombre de usuario" required>
             <button onclick="login()">Iniciar Sesión</button>
+            <p class="error" id="error-message" style="display: none;"></p>
         </div>
 
         <!-- Calendario semanal -->
-        <div id="calendar"></div>
+        <div id="calendar" style="display: none;"></div>
 
-        <!-- Mensajes de error -->
-        <p class="error" id="error-message" style="display: none;"></p>
+        <!-- Mensajes de éxito -->
+        <p class="success" id="success-message" style="display: none;"></p>
 
     </div>
 
@@ -122,7 +135,7 @@
 
         let currentUser = null;
 
-        // Función para generar el calendario semanal
+        // Función para generar el calendario semanal (lunes a viernes)
         function generateCalendar() {
             const calendarDiv = document.getElementById('calendar');
             calendarDiv.innerHTML = ''; // Limpiar el contenido anterior
@@ -131,7 +144,7 @@
             const startOfWeek = new Date(today.setDate(today.getDate() - today.getDay())); // Lunes de la semana actual
             const days = [];
 
-            for (let i = 0; i < 7; i++) {
+            for (let i = 0; i < 5; i++) { // Solo mostrar lunes a viernes
                 const day = new Date(startOfWeek.getTime() + i * 24 * 60 * 60 * 1000);
                 days.push(day);
             }
@@ -158,6 +171,7 @@
                 sessionKeys.forEach(sessionKey => {
                     const sessionDiv = document.createElement('div');
                     sessionDiv.className = 'session';
+
                     const remaining = sessions[dateKey][sessionKey].capacity - sessions[dateKey][sessionKey].reserved.length;
 
                     sessionDiv.innerHTML = `
@@ -165,25 +179,19 @@
                         <p>Plazas disponibles: ${remaining}</p>
                     `;
 
-                    if (!currentUser) {
-                        sessionDiv.innerHTML += '<p>Inicia sesión para reservar.</p>';
-                    } else {
-                        const isReserved = sessions[dateKey][sessionKey].reserved.includes(currentUser);
+                    const isReserved = sessions[dateKey][sessionKey].reserved.includes(currentUser);
 
-                        if (isReserved) {
-                            const cancelBtn = document.createElement('button');
-                            cancelBtn.textContent = 'Cancelar Reserva';
-                            cancelBtn.className = 'cancel';
-                            cancelBtn.onclick = () => cancelReservation(dateKey, sessionKey);
-                            sessionDiv.appendChild(cancelBtn);
-                        } else if (remaining > 0) {
-                            const reserveBtn = document.createElement('button');
-                            reserveBtn.textContent = 'Reservar';
-                            reserveBtn.onclick = () => makeReservation(dateKey, sessionKey);
-                            sessionDiv.appendChild(reserveBtn);
-                        } else {
-                            sessionDiv.innerHTML += '<p>No hay plazas disponibles.</p>';
-                        }
+                    if (isReserved) {
+                        sessionDiv.classList.add('cancelled');
+                        sessionDiv.onclick = () => cancelReservation(dateKey, sessionKey);
+                        sessionDiv.textContent = 'Cancelar Reserva';
+                    } else if (remaining > 0) {
+                        sessionDiv.onclick = () => makeReservation(dateKey, sessionKey);
+                        sessionDiv.textContent = 'Reservar';
+                    } else {
+                        sessionDiv.style.opacity = '0.5';
+                        sessionDiv.style.pointerEvents = 'none';
+                        sessionDiv.textContent = 'Sin plazas';
                     }
 
                     dayDiv.appendChild(sessionDiv);
@@ -196,31 +204,19 @@
         // Función para iniciar sesión
         function login() {
             const username = document.getElementById('username').value.trim();
-            if (username) {
-                currentUser = username;
-                document.getElementById('user-name').textContent = `Usuario: ${currentUser}`;
-                document.getElementById('login-form').style.display = 'none';
-                generateCalendar();
-            } else {
+            if (!username) {
                 showError('Por favor, ingresa un nombre de usuario.');
+                return;
             }
-        }
 
-        // Función para cerrar sesión
-        function logout() {
-            currentUser = null;
-            document.getElementById('user-name').textContent = 'Usuario: Invitado';
-            document.getElementById('login-form').style.display = 'block';
+            currentUser = username;
+            document.getElementById('login-form').style.display = 'none';
+            document.getElementById('calendar').style.display = 'grid';
             generateCalendar();
         }
 
         // Función para hacer una reserva
         function makeReservation(dateKey, sessionKey) {
-            if (!currentUser) {
-                showError('Debes iniciar sesión para reservar.');
-                return;
-            }
-
             const session = sessions[dateKey][sessionKey];
             if (session.reserved.includes(currentUser)) {
                 showError('Ya has reservado esta sesión.');
@@ -255,11 +251,16 @@
 
         // Función para mostrar mensajes de éxito
         function showSuccessMessage(message) {
-            alert(message);
+            const successMessage = document.getElementById('success-message');
+            successMessage.textContent = message;
+            successMessage.style.display = 'block';
+            setTimeout(() => {
+                successMessage.style.display = 'none';
+            }, 3000); // Ocultar después de 3 segundos
         }
 
         // Inicialización
-        generateCalendar();
+        generateCalendar(); // Generar calendario inicial (oculto hasta que se inicie sesión)
     </script>
 
 </body>
