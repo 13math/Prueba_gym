@@ -110,6 +110,10 @@
         .login-form button:hover {
             background: #0056b3;
         }
+        .logged-in-info {
+            text-align: right;
+            margin-bottom: 20px;
+        }
         .error {
             color: red;
             font-size: 14px;
@@ -125,6 +129,12 @@
 <body>
 
     <div class="container">
+
+        <!-- Información del usuario -->
+        <div class="logged-in-info" id="logged-in-info" style="display: none;">
+            <span id="user-name">Usuario: Invitado</span>
+            <button onclick="logout()">Cerrar Sesión</button>
+        </div>
 
         <!-- Formulario de inicio de sesión -->
         <div class="login-form" id="login-form">
@@ -155,11 +165,18 @@
             calendarDiv.innerHTML = ''; // Limpiar el contenido anterior
 
             const today = new Date();
-            const startOfWeek = new Date(today.setDate(today.getDate() - today.getDay())); // Lunes de la semana actual
+            const currentDayOfWeek = today.getDay(); // 0 = domingo, 1 = lunes, ..., 6 = sábado
+            const startOfWeek = new Date(today.setDate(today.getDate() - currentDayOfWeek + (currentDayOfWeek === 0 ? -6 : 1))); // Lunes de la semana actual
             const days = [];
 
             for (let i = 0; i < 5; i++) { // Solo mostrar lunes a viernes
                 const day = new Date(startOfWeek.getTime() + i * 24 * 60 * 60 * 1000);
+
+                // Solo mostrar días futuros o el día actual si aún no han pasado las sesiones
+                if (day < today || (day.toDateString() === today.toDateString() && isPastSession())) {
+                    continue;
+                }
+
                 days.push(day);
             }
 
@@ -219,6 +236,15 @@
             });
         }
 
+        // Verificar si una sesión ya pasó en el día actual
+        function isPastSession() {
+            const now = new Date();
+            const morningEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 30);
+            const eveningEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 19, 30);
+
+            return now > eveningEnd || (now > morningEnd && now < eveningEnd);
+        }
+
         // Función para iniciar sesión
         function login() {
             const username = document.getElementById('username').value.trim();
@@ -230,7 +256,18 @@
             currentUser = username;
             document.getElementById('login-form').style.display = 'none';
             document.getElementById('calendar').style.display = 'grid';
+            document.getElementById('logged-in-info').style.display = 'block';
+            document.getElementById('user-name').textContent = `Usuario: ${currentUser}`;
             generateCalendar();
+        }
+
+        // Función para cerrar sesión
+        function logout() {
+            currentUser = null;
+            document.getElementById('login-form').style.display = 'block';
+            document.getElementById('calendar').style.display = 'none';
+            document.getElementById('logged-in-info').style.display = 'none';
+            document.getElementById('user-name').textContent = 'Usuario: Invitado';
         }
 
         // Función para hacer una reserva
