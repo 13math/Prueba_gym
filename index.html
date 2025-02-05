@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reserva de Sesiones - Gimnasio</title>
     <style>
+        /* Estilos previos (sin cambios) */
         body {
             font-family: Arial, sans-serif;
             margin: 0;
@@ -159,25 +160,28 @@
 
         let currentUser = null;
 
-        // Función para generar el calendario semanal (lunes a viernes)
+        // Función para generar el calendario con fechas futuras
         function generateCalendar() {
             const calendarDiv = document.getElementById('calendar');
             calendarDiv.innerHTML = ''; // Limpiar el contenido anterior
 
             const today = new Date();
-            const currentDayOfWeek = today.getDay(); // 0 = domingo, 1 = lunes, ..., 6 = sábado
-            const startOfWeek = new Date(today.setDate(today.getDate() - currentDayOfWeek + (currentDayOfWeek === 0 ? -6 : 1))); // Lunes de la semana actual
             const days = [];
 
-            for (let i = 0; i < 5; i++) { // Solo mostrar lunes a viernes
-                const day = new Date(startOfWeek.getTime() + i * 24 * 60 * 60 * 1000);
+            // Obtener los próximos 5 días laborables (lunes a viernes)
+            let dayCount = 0;
+            let currentDate = new Date(today);
 
-                // Solo mostrar días futuros o el día actual si aún no han pasado las sesiones
-                if (day < today || (day.toDateString() === today.toDateString() && isPastSession())) {
-                    continue;
+            while (days.length < 5) {
+                currentDate.setDate(currentDate.getDate() + 1); // Avanzar un día
+                const dayOfWeek = currentDate.getDay(); // 0 = domingo, 1 = lunes, ..., 6 = sábado
+
+                if (dayOfWeek >= 1 && dayOfWeek <= 5) { // Solo lunes a viernes
+                    if (currentDate > today || (currentDate.toDateString() === today.toDateString() && !isPastSession())) {
+                        days.push(new Date(currentDate));
+                        dayCount++;
+                    }
                 }
-
-                days.push(day);
             }
 
             days.forEach(day => {
