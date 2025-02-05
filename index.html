@@ -167,21 +167,26 @@
 
             const today = new Date();
             const days = [];
-
-            // Obtener los próximos 5 días laborables (lunes a viernes)
-            let dayCount = 0;
             let currentDate = new Date(today);
 
+            // Obtener los próximos 5 días laborables (lunes a viernes)
             while (days.length < 5) {
                 currentDate.setDate(currentDate.getDate() + 1); // Avanzar un día
                 const dayOfWeek = currentDate.getDay(); // 0 = domingo, 1 = lunes, ..., 6 = sábado
 
                 if (dayOfWeek >= 1 && dayOfWeek <= 5) { // Solo lunes a viernes
-                    if (currentDate > today || (currentDate.toDateString() === today.toDateString() && !isPastSession())) {
+                    if (
+                        currentDate > today || 
+                        (currentDate.toDateString() === today.toDateString() && !isPastSession())
+                    ) {
                         days.push(new Date(currentDate));
-                        dayCount++;
                     }
                 }
+            }
+
+            // Asegurarse de que el día actual esté incluido si aún hay sesiones disponibles
+            if (today.getDay() >= 1 && today.getDay() <= 5 && !isPastSession()) {
+                days.unshift(new Date(today)); // Agregar el día actual al inicio
             }
 
             days.forEach(day => {
